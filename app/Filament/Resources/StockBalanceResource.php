@@ -9,11 +9,18 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\Summarizers\Average;
+use Filament\Tables\Columns\Summarizers\Sum;
+use Filament\Tables\Columns\Summarizers\Summarizer;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Pagination\CursorPaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 
 class StockBalanceResource extends Resource
@@ -58,6 +65,10 @@ class StockBalanceResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->groups([
+                Group::make('product.name')
+                    ->titlePrefixedWithLabel(false),
+            ])
             ->columns([
                 Tables\Columns\TextColumn::make('transaction.voucher_no')
                     ->label('Voucher No')
@@ -72,6 +83,7 @@ class StockBalanceResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('unit'),
                 Tables\Columns\TextColumn::make('sale_price')
+                    ->label('Purchased Pirce')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('current_quantity')
@@ -92,16 +104,12 @@ class StockBalanceResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('purchase_quantity')
+                    ->summarize(Sum::make()),
+                TextColumn::make('current_quantity')
+                    ->summarize(Sum::make()),
             ])
-//            ->modifyQueryUsing(function (Builder $query) {
-//                $query->select([
-//                    'transaction_id', 'product_id', 'batch_no', 'unit',
-//                    'sale_price', 'created_by', 'updated_by'
-//                ])
-//                    ->selectRaw('SUM(current_quantity) as total_current_quantity')
-//                    ->selectRaw('SUM(purchase_quantity) as total_purchase_quantity')
-//                    ->groupBy('transaction_id', 'product_id', 'batch_no', 'unit', 'sale_price', 'created_by', 'updated_by');
-//            })
+
             ->filters([
                 SelectFilter::make('transaction_id')
                     ->label('Voucher No')
@@ -123,6 +131,7 @@ class StockBalanceResource extends Resource
 //                ]),
             ]);
     }
+
 
     public static function getRelations(): array
     {

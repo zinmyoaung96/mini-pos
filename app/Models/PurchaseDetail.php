@@ -25,8 +25,6 @@ class PurchaseDetail extends Model
 
             $snapshotData = json_decode($updateData, true);
 
-
-
             if (!empty($snapshotData)){
                 $status = $snapshotData['data']['data'][0]['status'];
             }else{

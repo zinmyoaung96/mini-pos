@@ -20,6 +20,9 @@ use Filament\Forms\Components\Wizard;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\Split;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\EditAction;
@@ -40,16 +43,6 @@ class PurchaseResource extends Resource
 
     public static function form(Form $form): Form
     {
-
-        //
-//                Placeholder::make('voucher_no')
-//                    ->content(function ($record): string {
-//                        if ($record instanceof Purchase) {
-//                            return $record->voucher_no ?? '';
-//                        } else {
-//                            return '';
-//                        }
-//                    }),
 
         return $form
             ->schema([
@@ -223,7 +216,50 @@ class PurchaseResource extends Resource
             ->filters([
                 //
             ])
+            ->recordUrl(
+                fn (Model $record): string => false,
+            )
             ->actions([
+                Tables\Actions\Action::make('view')
+                    ->label('View') // Label for the action
+                    ->modalHeading('View Details') // Modal title
+                    ->modalSubheading(fn ($record) => 'Details of ' . $record->voucher_no) // Subheading
+                        ->modalSubmitAction(false)
+                    ->modalCancelAction(false)
+                    ->modalCloseButton(true)
+                    ->infolist([ // InfoList to show in the modal
+                        Split::make([
+                            \Filament\Infolists\Components\Section::make([
+                                TextEntry::make('voucher_no')
+                                    ->copyable()
+                                    ->copyMessage('Copied!')
+                                    ->copyMessageDuration(1500),
+                                TextEntry::make('status')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'order' => 'warning',
+                                        'completed' => 'success',
+                                        'cancel' => 'danger',
+                                        'draft' => 'gray',
+                                    }),
+                                TextEntry::make('total_price'),
+                                TextEntry::make('supplier.name'),
+                                TextEntry::make('payment_type'),
+                                TextEntry::make('remark'),
+                                RepeatableEntry::make('details')
+                                    ->schema([
+                                        TextEntry::make('product.name'),
+                                        TextEntry::make('purchase_price'),
+                                        TextEntry::make('quantity'),
+                                        TextEntry::make('unit'),
+                                        TextEntry::make('subtotal_price'),
+
+                                    ])
+                                    ->columns(5)
+                            ]),
+
+                        ])->from('lg')
+                    ]),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
 

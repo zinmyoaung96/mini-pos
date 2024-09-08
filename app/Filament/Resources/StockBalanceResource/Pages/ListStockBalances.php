@@ -6,6 +6,10 @@ use App\Filament\Resources\StockBalanceResource;
 use App\Models\StockBalance;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Contracts\Pagination\CursorPaginator;
+use Illuminate\Contracts\Pagination\Paginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class ListStockBalances extends ListRecords
 {
@@ -17,4 +21,6 @@ class ListStockBalances extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+
 }

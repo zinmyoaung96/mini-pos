@@ -5,12 +5,19 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ContactResource\Pages;
 use App\Filament\Resources\ContactResource\RelationManagers;
 use App\Models\Contact;
+use Filament\Actions\ViewAction;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\Split;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 
@@ -88,8 +95,46 @@ class ContactResource extends Resource
             ->filters([
                 //
             ])
+            ->recordUrl(
+                fn (Model $record): string => false,
+            )
             ->actions([
                 Tables\Actions\EditAction::make(),
+
+                // Custom 'View' Action to display the InfoList in a modal
+                Tables\Actions\Action::make('view')
+                    ->label('View') // Label for the action
+                    ->modalHeading('View Details') // Modal title
+                    ->modalSubheading(fn ($record) => 'Details of ' . $record->name) // Subheading
+                    ->modalSubmitAction(false)
+                    ->modalCancelAction(false)
+                    ->modalCloseButton(true)
+                    ->infolist([ // InfoList to show in the modal
+                        Split::make([
+                            Section::make([
+                                TextEntry::make('name'),
+                                TextEntry::make('email')
+                                    ->icon('heroicon-m-envelope'),
+                                TextEntry::make('phone')
+                                    ->icon('heroicon-s-phone'),
+                                TextEntry::make('address'),
+                                TextEntry::make('type')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'customer' => 'success',
+                                        'supplier' => 'danger',
+                                    }),
+                            ]),
+                            Section::make([
+                                TextEntry::make('created_at')
+                                    ->dateTime()
+                                    ->icon('heroicon-s-clock'),
+                                TextEntry::make('updated_at')
+                                    ->dateTime()
+                                    ->icon('heroicon-s-clock'),
+                            ])->grow(false),
+                        ])->from('md'),
+                    ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -97,6 +142,7 @@ class ContactResource extends Resource
                 ]),
             ]);
     }
+
 
     public static function getRelations(): array
     {

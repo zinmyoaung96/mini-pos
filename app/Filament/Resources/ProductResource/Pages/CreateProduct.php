@@ -16,4 +16,9 @@ class CreateProduct extends CreateRecord
         $data['sku'] = Product::generateSku();
         return $data;
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

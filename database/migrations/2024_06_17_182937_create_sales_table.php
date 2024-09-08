@@ -25,6 +25,7 @@ return new class extends Migration
             $table->enum('payment_type', ['cash', 'online'])->default('cash');
             $table->decimal('paid_amount', 10,2)->nullable();
             $table->decimal('balance_amount', 10,2)->nullable();
+            $table->decimal('refund_amount', 10,2)->nullable();
             $table->bigInteger('created_by')->nullable();
             $table->bigInteger('updated_by')->nullable();
             $table->timestamps();

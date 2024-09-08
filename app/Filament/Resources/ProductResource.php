@@ -10,11 +10,15 @@ use App\Filament\Resources\SaleResource\RelationManagers\SaleDetailsRelationMana
 use App\Models\Product;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\Split;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ProductResource extends Resource
@@ -101,8 +105,41 @@ class ProductResource extends Resource
             ->filters([
                 //
             ])
+            ->recordUrl(
+                fn (Model $record): string => false,
+            )
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('view')
+                    ->label('View') // Label for the action
+                    ->modalHeading('View Details') // Modal title
+                    ->modalSubheading(fn ($record) => 'Details of ' . $record->name) // Subheading
+                    ->modalSubmitAction(false)
+                    ->modalCancelAction(false)
+                    ->modalCloseButton(true)
+                    ->infolist([ // InfoList to show in the modal
+                        Split::make([
+                            Section::make([
+                                TextEntry::make('sku')
+                                    ->copyable()
+                                    ->copyMessage('Copied!')
+                                    ->copyMessageDuration(1500),
+                                TextEntry::make('name'),
+                                TextEntry::make('sale_price'),
+                                TextEntry::make('stock'),
+                                TextEntry::make('unit'),
+                            ]),
+                            Section::make([
+                                TextEntry::make('created_at')
+                                    ->dateTime()
+                                    ->icon('heroicon-s-clock'),
+                                TextEntry::make('updated_at')
+                                    ->dateTime()
+                                    ->icon('heroicon-s-clock'),
+                            ])->grow(false),
+                        ])->from('md')
+                    ])
+
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

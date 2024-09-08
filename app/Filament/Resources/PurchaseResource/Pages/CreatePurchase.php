@@ -23,5 +23,10 @@ class CreatePurchase extends CreateRecord
 //        return redirect()->route('purchases.index');
     }
 
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
 
 }

@@ -21,12 +21,17 @@ use Filament\Forms\Components\Wizard;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\Split;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Notifications\Action;
 
@@ -83,13 +88,30 @@ class SaleResource extends Resource
                                 ->required(),
                             Forms\Components\Select::make('status')
                                 ->default('ordered')
-                                ->options([
-                                    'ordered' => 'Ordered',
-                                    'preparing' => 'Preparing',
-                                    'served' => 'Served',
-                                    'completed' => 'Completed',
-                                    'canceled' => 'Canceled',
-                                ])
+                                ->options(function ($get, $record) {
+                                    // If updating, limit the options based on the current status
+                                    if ($record) {
+                                        $currentStatus = $record->status;
+
+                                        if (in_array($currentStatus, ['completed', 'served'])) {
+                                            // Only allow the current status or later statuses
+                                            return [
+                                                'served' => 'Served',
+                                                'completed' => 'Completed',
+                                                'canceled' => 'Canceled',
+                                            ];
+                                        }
+                                    }
+
+                                    // Default options for creating or when not restricted
+                                    return [
+                                        'ordered' => 'Ordered',
+                                        'preparing' => 'Preparing',
+                                        'served' => 'Served',
+                                        'completed' => 'Completed',
+                                        'canceled' => 'Canceled',
+                                    ];
+                                })
                                 ->native(false)
                                 ->required()
                                 ->reactive(),
@@ -204,7 +226,20 @@ class SaleResource extends Resource
                                 ->native(false),
                             TextInput::make('paid_amount')
                                 ->reactive()
-                                ->afterStateUpdated(fn ($state, callable $set, $get) => $set('balance_amount', max(0, $get('total_price') - $state))),
+                                ->afterStateUpdated(function ($state, callable $set, $get) {
+
+                                    if ($state > 0) {
+                                        $set('payment_status', 'paid');
+                                    } else {
+                                        $set('payment_status', 'pending');
+                                    }
+
+                                    $set('balance_amount', max(0, $get('total_price') - $state));
+                                    $set('refund_amount', max(0, $state - $get('total_price')));
+                                }),
+                            TextInput::make('refund_amount')
+                                ->reactive()
+                                ->readOnly(),
                             TextInput::make('balance_amount')
                             ->reactive()
                             ->readOnly(),
@@ -292,7 +327,62 @@ class SaleResource extends Resource
             ->filters([
                 //
             ])
+            ->recordUrl(
+                fn (Model $record): string => false,
+            )
             ->actions([
+                Tables\Actions\Action::make('view')
+                    ->label('View') // Label for the action
+                    ->modalHeading('View Details') // Modal title
+                    ->modalSubheading(fn ($record) => 'Details of ' . $record->voucher_no) // Subheading
+                    ->modalSubmitAction(false)
+                    ->modalCancelAction(false)
+                    ->modalCloseButton(true)
+                    ->infolist([ // InfoList to show in the modal
+                        Split::make([
+                            \Filament\Infolists\Components\Section::make([
+                                TextEntry::make('voucher_no')
+                                    ->copyable()
+                                    ->copyMessage('Copied!')
+                                    ->copyMessageDuration(1500),
+                                TextEntry::make('status')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'ordered' => 'warning',
+                                        'completed' => 'success',
+                                        'cancel' => 'danger',
+                                        'served' => 'gray',
+                                    }),
+                                TextEntry::make('payment_status')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'pending' => 'info',
+                                        'paid' => 'success',
+                                        'refunded' => 'danger',
+                                    }),
+                                TextEntry::make('customer.name'),
+                                TextEntry::make('payment_type'),
+                                Section::make()
+                                ->schema([
+                                TextEntry::make('total_price'),
+                                TextEntry::make('paid_amount'),
+                                TextEntry::make('refund_amount'),
+                                TextEntry::make('balance_amount'),
+                                ])->columns(4),
+                                RepeatableEntry::make('details')
+                                    ->schema([
+                                        TextEntry::make('product.name'),
+                                        TextEntry::make('sale_price'),
+                                        TextEntry::make('quantity'),
+                                        TextEntry::make('unit'),
+                                        TextEntry::make('subtotal_price'),
+
+                                    ])
+                                    ->columns(5)
+                            ]),
+
+                        ])->from('lg')
+                    ]),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
